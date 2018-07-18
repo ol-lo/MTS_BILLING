@@ -1,18 +1,16 @@
 # -*- coding: cp1251 -*-
 import os
-import sys
 
+import openpyxl
 from openpyxl.styles import PatternFill
 from openpyxl.styles.colors import Color
 
-from report import PDFReport
 from constants import (
-    NAME_FILE, NAME_PAGE, MAP_EXCEL, DATA_ROW_HEADER, FIRST, ENCODE_TYPE,
-    CP_1251,
-    UTF8, MAP_MONTH,
-    PHONE, COL_NAMES, RANGE_FULL, RANGE_WITH_SUM, START, TEMPLATE_RANGE, END,
+    NAME_FILE, NAME_PAGE, MAP_EXCEL, DATA_ROW_HEADER, FIRST, CP_1251,
+    MAP_MONTH,
+    PHONE, COL_NAMES, RANGE_WITH_SUM, START, TEMPLATE_RANGE, END,
     AMOUNT_PER_NUMBER, ONE, CONTRACT, PATH_TO_IN)
-import openpyxl
+from report import PDFReport
 
 
 class AllReports(PDFReport):
@@ -158,8 +156,8 @@ class AllReports(PDFReport):
 
                     page_for_report[
                         '{}{}'.format(
-                            MAP_EXCEL[COL_NAMES][CONTRACT], self.contract)
-                    ].value = item_not_found
+                            MAP_EXCEL[COL_NAMES][CONTRACT], last_num)
+                    ].value = self.contract
 
         else:
             sys.stdout.write(
@@ -177,17 +175,12 @@ class AllReports(PDFReport):
 
 if __name__ == "__main__" and __package__ is None:
     from os import sys, path
-    from time import sleep
+
     try:
         sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
     except NameError:  # py2exe script, not a module
         import sys
         sys.path.append(path.dirname(path.dirname(sys.argv[0])))
-    # try:
-    #     path_to_dir = os.path.dirname(__file__)
-    # except NameError:  # py2exe script, not a module
-    #     path_to_dir = path.dirname(sys.argv[0])
-    #     sys.stdout.write(path_to_dir)
 
     files = os.listdir(PATH_TO_IN)
 
