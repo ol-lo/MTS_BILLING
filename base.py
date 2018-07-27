@@ -1,22 +1,20 @@
-# -*- coding: cp1251 -*-
+п»ї# -*- coding: cp1251 -*-
 import os
-import sys
 
+import openpyxl
 from openpyxl.styles import PatternFill
 from openpyxl.styles.colors import Color
 
-from report import PDFReport
 from constants import (
-    NAME_FILE, NAME_PAGE, MAP_EXCEL, DATA_ROW_HEADER, FIRST, ENCODE_TYPE,
-    CP_1251,
-    UTF8, MAP_MONTH,
-    PHONE, COL_NAMES, RANGE_FULL, RANGE_WITH_SUM, START, TEMPLATE_RANGE, END,
+    NAME_FILE, NAME_PAGE, MAP_EXCEL, DATA_ROW_HEADER, FIRST, CP_1251,
+    MAP_MONTH,
+    PHONE, COL_NAMES, RANGE_WITH_SUM, START, TEMPLATE_RANGE, END,
     AMOUNT_PER_NUMBER, ONE, CONTRACT, PATH_TO_IN)
-import openpyxl
+from report import PDFReport
 
 
 class AllReports(PDFReport):
-    END_LINE = u'Итого по лицевому счету без скидки'
+    END_LINE = u'РС‚РѕРіРѕ РїРѕ Р»РёС†РµРІРѕРјСѓ СЃС‡РµС‚Сѓ Р±РµР· СЃРєРёРґРєРё'
     DICT_ARGUMENTS = {
         12: AMOUNT_PER_NUMBER,
         2: PHONE
@@ -59,18 +57,18 @@ class AllReports(PDFReport):
             range_with_data_headers[FIRST]
         )
         sys.stdout.write(
-            u'\n Выборка дат из excel завершина \n '
+            u'\n Р’С‹Р±РѕСЂРєР° РґР°С‚ РёР· excel Р·Р°РІРµСЂС€РёРЅР° \n '
         )
 
         range_phone = filter(lambda x: x[0].value is not None, range_phone_all)
 
-        sys.stdout.write(u'\nВыборка телефонов завершина. \n')
+        sys.stdout.write(u'\nР’С‹Р±РѕСЂРєР° С‚РµР»РµС„РѕРЅРѕРІ Р·Р°РІРµСЂС€РёРЅР°. \n')
 
         if range_date_headers:
             cell_cur = range_date_headers[0]
             sys.stdout.write(
-                u"дата присуствует в"
-                u" списке\n ячейка {}{} \n значение {}\n\n".format(
+                u"РґР°С‚Р° РїСЂРёСЃСѓСЃС‚РІСѓРµС‚ РІ"
+                u" СЃРїРёСЃРєРµ\n СЏС‡РµР№РєР° {}{} \n Р·РЅР°С‡РµРЅРёРµ {}\n\n".format(
                     cell_cur.column, cell_cur.row, cell_cur.value)
             )
 
@@ -84,7 +82,7 @@ class AllReports(PDFReport):
                             2
                         )
                 },
-                self.result)
+                result)
 
             dict_res = {}
             for item in phones_amount_dict:
@@ -104,7 +102,7 @@ class AllReports(PDFReport):
                 if amount_per_number is not None:
                     dict_res.pop(var_temp_value)
                     sys.stdout.write(
-                        u"Подстановка значений {}+{} в ячейку {}\n".format(
+                        u"РџРѕРґСЃС‚Р°РЅРѕРІРєР° Р·РЅР°С‡РµРЅРёР№ {}+{} РІ СЏС‡РµР№РєСѓ {}\n".format(
                             amount_per_number, cur_value, var_temp_row_index)
                     )
                     page_for_report[var_temp_row_index].value = (
@@ -129,11 +127,11 @@ class AllReports(PDFReport):
             if dict_res and not amount_per_number:
                 for item_not_found in dict_res:
                     sys.stdout.write(
-                        u"{}   нет в списке \n".format(item_not_found)
+                        u"{}   РЅРµС‚ РІ СЃРїРёСЃРєРµ \n".format(item_not_found)
                     )
                     last_num += ONE
                     sys.stdout.write(
-                        u'добавляю значение {} в {}{}\n'.format(
+                        u'РґРѕР±Р°РІР»СЏСЋ Р·РЅР°С‡РµРЅРёРµ {} РІ {}{}\n'.format(
                             dict_res[item_not_found], cell_cur.column, last_num)
                     )
                     page_for_report[
@@ -141,7 +139,7 @@ class AllReports(PDFReport):
                     ].value = dict_res[item_not_found]
 
                     sys.stdout.write(
-                        u'добавляю значение {} в {}{}\n'.format(
+                        u'РґРѕР±Р°РІР»СЏСЋ Р·РЅР°С‡РµРЅРёРµ {} РІ {}{}\n'.format(
                             item_not_found, MAP_EXCEL[COL_NAMES][PHONE],
                             last_num)
                     )
@@ -151,19 +149,19 @@ class AllReports(PDFReport):
                     ].value = item_not_found
 
                     sys.stdout.write(
-                        u'добавляю значение {} в {}{}\n'.format(
+                        u'РґРѕР±Р°РІР»СЏСЋ Р·РЅР°С‡РµРЅРёРµ {} РІ {}{}\n'.format(
                             self.contract, MAP_EXCEL[COL_NAMES][CONTRACT],
                             last_num)
                     )
 
                     page_for_report[
                         '{}{}'.format(
-                            MAP_EXCEL[COL_NAMES][CONTRACT], self.contract)
-                    ].value = item_not_found
+                            MAP_EXCEL[COL_NAMES][CONTRACT], last_num)
+                    ].value = self.contract
 
         else:
             sys.stdout.write(
-                u"дата {} {} {} не найдена\n\nСледующий ...\n".format(
+                u"РґР°С‚Р° {} {} {} РЅРµ РЅР°Р№РґРµРЅР°\n\nРЎР»РµРґСѓСЋС‰РёР№ ...\n".format(
                     day, month, year)
             )
         try:
@@ -171,52 +169,50 @@ class AllReports(PDFReport):
             book_excel.close()
 
         except IOError:
-            sys.stdout.write(u"Файл открыт ? ")
+            sys.stdout.write(u"Р¤Р°Р№Р» РѕС‚РєСЂС‹С‚ ? ")
             sys.exit(1)
 
 
 if __name__ == "__main__" and __package__ is None:
     from os import sys, path
-    from time import sleep
+
     try:
         sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
     except NameError:  # py2exe script, not a module
         import sys
         sys.path.append(path.dirname(path.dirname(sys.argv[0])))
-    # try:
-    #     path_to_dir = os.path.dirname(__file__)
-    # except NameError:  # py2exe script, not a module
-    #     path_to_dir = path.dirname(sys.argv[0])
-    #     sys.stdout.write(path_to_dir)
 
     files = os.listdir(PATH_TO_IN)
 
     for file_ in files:
         sys.stdout.write(file_.decode(CP_1251))
+        try:
+            AllReports(
+                (
+                    u'(РЎРµС‚РµРІРѕР№ СЂРµСЃСѓСЂСЃ(\d{11})'
+                    u'\s(РџРµСЂРёРѕРґРёС‡РµСЃРєРёРµ\sСѓСЃР»СѓРіРё\s\d{1,6},'
+                    u'\d{4}\s{2})?(РЎРєРёРґРєР°\soff-line'
+                    u'\s\(РџРµСЂРёРѕРґРёС‡РµСЃРєРёРµ СѓСЃР»СѓРіРё\)-\d{1,6},'
+                    u'\d{4}\s{2})?(Р Р°Р·РѕРІС‹Рµ\sСѓСЃР»СѓРіРё'
+                    u'\s\d{1,6},\d{4})?(РЎРєРёРґРєР°\soff-line\s'
+                    u'\(Р Р°Р·РѕРІС‹Рµ\sСѓСЃР»СѓРіРё\)-\d{1,6},\d{4}\s{2})'
+                    u'?(РўРµР»РµС„РѕРЅРЅС‹Рµ\sСѓСЃР»СѓРіРё\s\d{1,6},'
+                    u'\d{4}\s{0,2})?(РЎРєРёРґРєР°\soff-line\s\(РўРµР»РµС„РѕРЅРЅС‹Рµ\sСѓСЃР»СѓРіРё\)-'
+                    u'\d{1,6},\d{4}\s{2})?(РќР”РЎ\s\d{1,6},\d{4})'
+                    u'?(РС‚РѕРіРѕ\s\Р±РµР·\sСЃРєРёРґРєРё:'
+                    u'\s\d{1,6},\d{4}\s{2})'
+                    u'?(РС‚РѕРіРѕ\sСЃРєРёРґРєР°\soff-line:-\d{1,6},\d{4}\s{2})?'
+                    u'РС‚РѕРіРѕ:\s(\d{1,6},\d{4})?)'
+                ),
 
-        AllReports(
-            (
-                u'(Сетевой ресурс(\d{11})'
-                u'\s(Периодические\sуслуги\s\d{1,6},'
-                u'\d{4}\s{2})?(Скидка\soff-line'
-                u'\s\(Периодические услуги\)-\d{1,6},'
-                u'\d{4}\s{2})?(Разовые\sуслуги'
-                u'\s\d{1,6},\d{4})?(Скидка\soff-line\s'
-                u'\(Разовые\sуслуги\)-\d{1,6},\d{4}\s{2})'
-                u'?(Телефонные\sуслуги\s\d{1,6},'
-                u'\d{4}\s{0,2})?(Скидка\soff-line\s\(Телефонные\sуслуги\)-'
-                u'\d{1,6},\d{4}\s{2})?(НДС\s\d{1,6},\d{4})'
-                u'?(Итого\s\без\sскидки:'
-                u'\s\d{1,6},\d{4}\s{2})'
-                u'?(Итого\sскидка\soff-line:-\d{1,6},\d{4}\s{2})?'
-                u'Итого:\s(\d{1,6},\d{4})?)'
-            ),
+                u'.+(?P<date_>\d{2}\.\d{2}\.\d{4})',
 
-            u'.+(?P<date_>\d{2}\.\d{2}\.\d{4})',
+                u'.+\d{12}\s{2}(?P<contract>\d{3}\s\d{3}\s\d{3}\s\d{3})',
+                NAME_FILE
 
-            u'.+\d{12}\s{2}(?P<contract>\d{3}\s\d{3}\s\d{3}\s\d{3})',
-            NAME_FILE
+            ).find_values(os.path.join(PATH_TO_IN, file_))
+        except Exception as err:
+            sys.stdout.write(err.message)
+            sys.stdout.write(err.args)
 
-        ).find_values(os.path.join(PATH_TO_IN, file_))
-
-    sys.stdout.write(u" Конец ... ")
+    sys.stdout.write(u" РљРѕРЅРµС† ... ")
