@@ -1,4 +1,4 @@
 FILE_PARAM:
   PAGE_NAME: 'Bill phone numbers'
-  PATH_TO_FILE_OUT: 'W:\FINANCE\Ivashchenko\MTS reports\OUT\result.xlsx'
-  PATH_TO_IN_FOLDER: 'W:\FINANCE\Ivashchenko\MTS reports\IN'
+  PATH_TO_FILE_OUT: 'W:\IT\MTS_BILLING\OUT\result.xlsx'
+  PATH_TO_IN_FOLDER: 'W:\IT\MTS_BILLING\IN\'

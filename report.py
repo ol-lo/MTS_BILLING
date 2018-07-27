@@ -302,7 +302,7 @@ class PDFReport(InterfaceReportMTS, ReportLoggerMixin):
                     self.contract = contract.group('contract').replace(' ', '')
 
                 if not self.contract:
-                    sys.stdout.write(u"Не обнаружен контракт")
+                    sys.stdout.write(u"Не обнаружен контракт \n")
 
                 date_ = self.pattern_date.search(unicode_text)
 
@@ -310,7 +310,7 @@ class PDFReport(InterfaceReportMTS, ReportLoggerMixin):
                     self.date_ = date_.group('date_')
 
                 if not self.date_:
-                    sys.stdout.write(u"Не обнаружена дата ")
+                    sys.stdout.write(u"Не обнаружена дата \n")
 
                 for element_on_page in self.data_unit.findall(
                         unicode_text.decode(UTF8)):
@@ -351,8 +351,7 @@ class PDFReport(InterfaceReportMTS, ReportLoggerMixin):
         if self.out_file:
             try:
                 self.write_(self.out_file, self.result)
-            except Exception as error:
-                print error
+            except Exception as ValueError:
                 sys.stdout.write(error.message)
                 sys.exit(1)
         else:
