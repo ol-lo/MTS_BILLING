@@ -13,6 +13,7 @@ import os
 import glob
 import numpy
 
+
 def find_data_files(source,target,patterns):
     """Locates the specified data-files and returns the matches
     in a data_files compatible format.
@@ -39,6 +40,8 @@ def find_data_files(source,target,patterns):
                 path_ = os.path.dirname(target_path)
                 ret.setdefault(path_, []).append(file_name)
     return sorted(ret.items())
+
+
 def numpy_dll_paths_fix():
     paths = set()
     np_path = numpy.__path__[0]
@@ -48,6 +51,7 @@ def numpy_dll_paths_fix():
                 paths.add(dirpath)
 
     sys.path.append(*list(paths))
+
 
 numpy_dll_paths_fix()
 
@@ -70,5 +74,5 @@ setup(
     },
     data_files=find_data_files('data', '', [
         'config.yaml',
-    ]),
+    ]), requires=['PyPDF2', 'openpyxl', 'numpy']
 )
