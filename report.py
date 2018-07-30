@@ -12,8 +12,62 @@ from abc import abstractmethod
 import PyPDF2
 
 from constants import (
-    SECOND, ENCODE_TYPE, REPLACE_CHAR, EMPTY_STRING, FIRST,
-    READ_BINARY, ONE, CP_1251, TXT, UTF8)
+    ENCODE_TYPE, EMPTY_CHAR_FOR_REPLACE, READ_BINARY, ONE, CP_1251, TXT, UTF8,
+    YYYY_MM_DD_FORMAT)
+
+
+class BillingErrorDataUnit(Exception):
+    """
+    Класс исключений, ошибка компиляции  выжения
+    итоговых сумм в отчетах
+    """
+    _TEXT_UNIT = u'(data_unit)'
+    _ARGS = (
+        u'Регулярное вырожение не {} ' 
+        u'может быть скомпилировано \n'.format(_TEXT_UNIT)
+    )
+
+    def __init__(self):
+        self.__module__ = self.__class__.__name__
+        self.args = self._ARGS
+
+
+class BillingErrorPatternDate(BillingErrorDataUnit):
+    """
+    Класс исключений, ошибка компиляции регулярного вырожения
+    для поиска даты отчета
+    """
+    _TEXT_UNIT = u'(pattern_date)'
+
+
+class BillingErrorPatternContact(BillingErrorDataUnit):
+    """
+        Класс исключений, ошибка компиляции регулярного вырожения
+        для поиска контакта
+    """
+    _TEXT_UNIT = u'(pattern_contract)'
+
+
+class BillingErrorFileRead(BillingErrorPatternContact):
+    """
+    Класс ошибок, связанный с работой  операционной системы
+    или ошибки доступа к файлу.
+    """
+    _ARGS = (
+        u"Не удается прочитать файл.\n"
+        u"Возможно, нет прав на прочтение \n"
+        u" или файла не сущестует"
+    )
+
+
+class BillingErrorFileWrite(BillingErrorFileRead):
+    """
+       Класс ошибок, связанный с работой  операционной системы
+       или ошибки доступа к файлу.
+    """
+    _ARGS = (
+        u"Файл не может быть изменен, \n вероятно файд открыт"
+    )
 
 
 class LoggerAbstractMixin(object):
@@ -73,27 +127,15 @@ class ReportLoggerMixin(LoggerAbstractMixin):
             log_file.write(string)
 
     def _create_folder(self):
-        self.path_to_dir_log = os.path.join(
-            self.ROOT_FOLDER,
-            getattr(self, self.SEPARATE_FOLDER),
-            datetime.datetime.now().strftime('%Y_%m_%d'),
-            TXT
-        ).replace(
-            '"', ''
-        ).replace(
-            "'", ''
-        ).replace(
-            '<', ''
-        ).replace(
-            '>', ''
-        ).replace(
-            '*', ''
-        ).replace(
-            '?', ''
-        ).replace(
-            ':', ''
-        ).replace(
-            '|', ''
+        self.path_to_dir_log = re.sub(
+            '[\"\<>*\'?:]|',
+            '',
+            os.path.join(
+                self.ROOT_FOLDER,
+                getattr(self, self.SEPARATE_FOLDER),
+                datetime.datetime.now().strftime(YYYY_MM_DD_FORMAT),
+                TXT
+            )
         )
         if os.path.exists(self.path_to_dir_log):
             return
@@ -105,81 +147,20 @@ class ReportLoggerMixin(LoggerAbstractMixin):
         self._write_log(level, message)
 
 
-class MetaClassReport(type):
-    """ Мета класс для отчета """
-    
-    def __new__(cls, name, bases, dct):
-        u"""
-        Создание динамически расширяемого словаря _group, для класса.
-        Создание динамических getter и setter свойств.
-        :param name: Имя класса
-        :param bases: tuple родителей класса
-        :param dct: словарь методов и опций класса
-        :return: class
-        """
-
-        _GROUP = '_group'
-        new_dct = {}
-        for key in dct:
-            # u key = _ИмяКласса__ИмяПеременной
-            if key.startswith('_{name}'.format(name=name)):
-                new_property = key.split('__')[SECOND].lower()
-                new_dct[new_property] = None
-                
-                def make_getter(key):
-                    def getter_(self):
-                        return self._group.get(new_property, None)
-                    return getter_
-
-                def make_setter(key):
-                    def setter_(self, value):
-                        self._group[new_property] = value
-                    return setter_
-    
-                new_dct[key] = property(make_getter(key), make_setter(key))
-                if isinstance(new_dct.get(_GROUP), dict):
-                    new_dct[_GROUP].update({new_property: new_property})
-                else:
-                    new_dct[_GROUP] = {new_property: new_property}
-        if getattr(bases[0], _GROUP, {}):
-            # Наследование словаря _group
-            # TODO: Нет проверки на количество классов родителя
-            new_dct.get(_GROUP, {}).update(getattr(bases[0], _GROUP, {}))
-        dct.update(new_dct)
-
-        new_class = super(MetaClassReport, cls).__new__(cls, name, bases, dct)
-        return new_class
-
-
 class InterfaceReportMTS(object):
     """ Интерфейс отчетов """
-
-    __metaclass__ = MetaClassReport
-
-    # Предпологаемые методы
-    __ADDRESS_RECEIVER = 'ADDRESS_RECEIVER'
-    __ADDRESS_TRANSCEIVER = 'ADDRESS_TRANSCEIVER'
-    __ACCOUNT_NUMBER = 'ACCOUNT_NUMBER'
-    __DATE_OF_PAY = 'DATE_OF_PAY'
-    __PERIOD_OD_PAY = 'PERIOD_OD_PAY'
-    __DEATH_LINE_OF_PAY = 'DEATH_LINE_OF_PAY'
-    __PHYSICAL_ADDRESS = 'PHYSICAL_ADDRESS'
-    __TEST = 'TEST'
 
     def __init__(self, data_unit):
         """
         Ининциализация класса
-        :param regular: Текст, использумый в качестве регулярного вырожения.
+        :param data_unit: Текст, использумый в качестве регулярного вырожения.
         """
         self.result = []
         try:
-            # TODO: Exception вынести
             try:
                 self.data_unit = re.compile(data_unit, re.UNICODE)
             except sre_constants.error:
-                raise ValueError(
-                    u'Регулярное вырожение не '
-                    u'(data_unit) может быть скомпилировано')
+                raise BillingErrorDataUnit
 
         except ValueError as error:
             sys.stdout.write(
@@ -195,16 +176,11 @@ class InterfaceReportMTS(object):
 
 class PDFReport(InterfaceReportMTS, ReportLoggerMixin):
 
-    FIRST = FIRST
-    SECOND = SECOND
     END_LINE = None
     DICT_ARGUMENTS = {}
 
     def __init__(self, data_unit, pattern_date, pattern_contract):
         """
-        :param regular:
-            Временный аргумент, был значением регулярного вырожения
-            для проброса в словарь класса
         :param data_unit:
             регулярное вырожение для поиска итоговых сумм по номерам
         :param pattern_date:
@@ -217,21 +193,15 @@ class PDFReport(InterfaceReportMTS, ReportLoggerMixin):
         self.date_ = ''
         super(PDFReport, self).__init__(data_unit)
         try:
-            # TODO: Exception вынести
             try:
                 self.pattern_date = re.compile(pattern_date, re.UNICODE)
             except sre_constants.error:
-                raise ValueError(
-                    u'Регулярное вырожение не '
-                    u'(pattern_date) может быть скомпилировано')
+                raise BillingErrorPatternDate
             try:
                 self.pattern_contract = re.compile(pattern_contract, re.UNICODE)
-                # Для отладки
-                # self.debug = regular
             except sre_constants.error:
-                raise ValueError(
-                    u'Регулярное вырожение '
-                    u'(pattern_contract) не может быть скомпилировано')
+                raise BillingErrorPatternContact
+
         except ValueError as error:
             sys.stdout.write(
                 error.message
@@ -246,14 +216,11 @@ class PDFReport(InterfaceReportMTS, ReportLoggerMixin):
         """
         try:
             pdf_file_obj = open(file_name, READ_BINARY)
-        except IOError as err:
-            sys.exit(u"Error IO")
+        except IOError:
+            raise BillingErrorFileRead
         else:
             pdf_reader = PyPDF2.PdfFileReader(pdf_file_obj)
             return pdf_reader.numPages
-
-    def find_date_and_contract(self):
-        pass
 
     @staticmethod
     def open_file_and_return_text(file_name, num_page):
@@ -265,15 +232,15 @@ class PDFReport(InterfaceReportMTS, ReportLoggerMixin):
         """
         try:
             pdf_file_obj = open(file_name, READ_BINARY)
-        except IOError as err:
-            sys.stdout.write(err.args[ONE])
-            sys.exit(u"Error IO")
+        except IOError:
+            raise BillingErrorFileRead
         else:
             pdf_reader = PyPDF2.PdfFileReader(pdf_file_obj)
             page = pdf_reader.getPage(num_page)
             reading_data = page.extractText()
             first_text_page = reading_data.encode(ENCODE_TYPE)
-            result = first_text_page.replace(REPLACE_CHAR, EMPTY_STRING)
+            result = first_text_page.replace(
+                EMPTY_CHAR_FOR_REPLACE, '')
             pdf_file_obj.close()
             return result
 
@@ -351,9 +318,10 @@ class PDFReport(InterfaceReportMTS, ReportLoggerMixin):
         if self.out_file:
             try:
                 self.write_(self.out_file, self.result)
-            except Exception as ValueError:
-                sys.stdout.write(error.message)
-                sys.exit(1)
+            except ValueError:
+                sys.stdout.write(u'Отсуствуют данные  \n')
+                sys.stdout.write(u'файл пропущен {} \n'.format(self.out_file))
+                return
         else:
             sys.stdout.write(
                 u"Не определен файл выходной файл {}".format(

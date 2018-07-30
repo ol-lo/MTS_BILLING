@@ -1,4 +1,4 @@
-﻿# -*- coding: cp1251 -*-
+﻿# -*- coding: utf-8 -*-
 import os
 
 import openpyxl
@@ -10,7 +10,7 @@ from constants import (
     MAP_MONTH,
     PHONE, COL_NAMES, RANGE_WITH_SUM, START, TEMPLATE_RANGE, END,
     AMOUNT_PER_NUMBER, ONE, CONTRACT, PATH_TO_IN)
-from report import PDFReport
+from report import PDFReport, BillingErrorFileWrite
 
 
 class AllReports(PDFReport):
@@ -119,6 +119,7 @@ class AllReports(PDFReport):
                             fgColor=Color(color),
                         )
                     except TypeError:
+                        # Не всегда удается определить цвет
                         pass
                     else:
                         page_for_report[var_temp_row_index].fill = left_fill
@@ -169,8 +170,7 @@ class AllReports(PDFReport):
             book_excel.close()
 
         except IOError:
-            sys.stdout.write(u"Файл открыт ? ")
-            sys.exit(1)
+            raise BillingErrorFileWrite
 
 
 if __name__ == "__main__" and __package__ is None:
@@ -185,7 +185,7 @@ if __name__ == "__main__" and __package__ is None:
     files = os.listdir(PATH_TO_IN)
 
     for file_ in files:
-        sys.stdout.write(file_.decode(CP_1251))
+        sys.stdout.write(file_.decode(CP_1251) + '\n')
         try:
             AllReports(
                 (
@@ -213,6 +213,5 @@ if __name__ == "__main__" and __package__ is None:
             ).find_values(os.path.join(PATH_TO_IN, file_))
         except Exception as err:
             sys.stdout.write(err.message)
-            sys.stdout.write(err.args)
 
     sys.stdout.write(u" Конец ... ")
