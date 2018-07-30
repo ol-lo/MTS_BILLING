@@ -15,6 +15,7 @@ ENCODE_TYPE = 'utf-16-le'
 EMPTY_CHAR_FOR_REPLACE = b'\x00'
 YYYY_MM_DD_FORMAT = '%Y_%m_%d'
 CONFIG_FILE_NAME = 'config.yaml'
+XLSM = '.xlsm'
 
 
 ################################################################################

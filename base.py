@@ -1,15 +1,17 @@
 ﻿# -*- coding: utf-8 -*-
 import os
+from copy import copy
 
 import openpyxl
 from openpyxl.styles import PatternFill
 from openpyxl.styles.colors import Color
+from time import sleep
 
 from constants import (
     NAME_FILE, NAME_PAGE, MAP_EXCEL, DATA_ROW_HEADER, FIRST, CP_1251,
     MAP_MONTH,
     PHONE, COL_NAMES, RANGE_WITH_SUM, START, TEMPLATE_RANGE, END,
-    AMOUNT_PER_NUMBER, ONE, CONTRACT, PATH_TO_IN)
+    AMOUNT_PER_NUMBER, ONE, CONTRACT, PATH_TO_IN, XLSM)
 from report import PDFReport, BillingErrorFileWrite
 
 
@@ -30,7 +32,7 @@ class AllReports(PDFReport):
 
         book_excel = openpyxl.load_workbook(out_file)
 
-        if '.xlsm' in out_file:
+        if XLSM in out_file:
             book_excel = openpyxl.load_workbook(out_file, keep_vba=True)
 
         page_for_report = book_excel[NAME_PAGE]
@@ -109,10 +111,13 @@ class AllReports(PDFReport):
                             amount_per_number + cur_value)
 
                     left_cell = chr(ord(cell_cur.column)-1)
-                    fill = page_for_report[
+                    fill_ = page_for_report[
                         '{}{}'.format(left_cell, item_cell[0].row)].fill
 
-                    color = fill.fgColor.rgb
+                    color = fill_.fgColor.rgb
+                    if color == '00000000':
+                        # Замена черного на белый
+                        color = 'FFFFFFFF'
                     try:
                         left_fill = PatternFill(
                             fill_type='solid',
@@ -120,7 +125,18 @@ class AllReports(PDFReport):
                         )
                     except TypeError:
                         # Не всегда удается определить цвет
-                        pass
+
+                        new_cell = page_for_report[var_temp_row_index]
+                        old_cell = page_for_report[
+                            '{}{}'.format(left_cell, item_cell[0].row)]
+                        # копируем значения стилей
+                        new_cell.font = copy(old_cell.font)
+                        new_cell.border = copy(old_cell.border)
+                        new_cell.fill = copy(old_cell.fill)
+                        new_cell.number_format = copy(old_cell.number_format)
+                        new_cell.protection = copy(old_cell.protection)
+                        new_cell.alignment = copy(old_cell.alignment)
+
                     else:
                         page_for_report[var_temp_row_index].fill = left_fill
 
@@ -215,3 +231,5 @@ if __name__ == "__main__" and __package__ is None:
             sys.stdout.write(err.message)
 
     sys.stdout.write(u" Конец ... ")
+    sys.stdout.write(u" Для выхода зажмите ctrl + C ")
+    sleep(60)
