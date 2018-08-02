@@ -1,19 +1,15 @@
 # -*- coding: utf-8 -*-
 """ Интерфейc поиска в отчетах регулярных вырожений """
 
-import codecs
-import datetime
-import os
 import re
 import sre_constants
 import sys
-from abc import abstractmethod
 
 import PyPDF2
 
 from constants import (
-    ENCODE_TYPE, EMPTY_CHAR_FOR_REPLACE, READ_BINARY, ONE, CP_1251, TXT, UTF8,
-    YYYY_MM_DD_FORMAT)
+    ENCODE_TYPE, EMPTY_CHAR_FOR_REPLACE, READ_BINARY, ONE, CP_1251, UTF8, ZERO)
+from logger import ReportLoggerMixin, LoggerAbstractMixin
 
 
 class BillingErrorDataUnit(Exception):
@@ -66,85 +62,8 @@ class BillingErrorFileWrite(BillingErrorFileRead):
        или ошибки доступа к файлу.
     """
     _ARGS = (
-        u"Файл не может быть изменен, \n вероятно файд открыт"
+        u"Файл не может быть изменен, \n вероятно файл открыт ?"
     )
-
-
-class LoggerAbstractMixin(object):
-    u"""
-    Класс Миксин логгера
-    """
-    INFO, WARNING, ERROR, DEBUG = range(0, 4)
-    _LEVEL = {
-        INFO: u'Информация',
-        WARNING: u'Внимание',
-        ERROR: u'Ошибка',
-        DEBUG: u'Отладка'
-    }
-
-    def __init__(self):
-        self._create_folder()
-
-    @abstractmethod
-    def _create_folder(self):
-        u"""
-        Метод создает цепочку из каталогов
-        :return:
-        """
-        pass
-
-    @abstractmethod
-    def _write_log(self, level, message):
-        u"""
-        Метод записывает в файл
-        и очищает содержимое
-        :return:
-        """
-        pass
-
-
-class ReportLoggerMixin(LoggerAbstractMixin):
-    u"""
-    Миксин для ведения журнала
-    """
-    SEPARATE_FOLDER = ''
-    ROOT_FOLDER = ''
-    FOLDER_IS_EXITS = False
-
-    def _write_log(self, level, message):
-        time = datetime.datetime.now().strftime(u'%H:%M:%S')
-        string = u'{time:15}  {level:15}     {message:20} \r\n'.format(
-            time=time,
-            level=LoggerAbstractMixin._LEVEL.get(
-                level, LoggerAbstractMixin.ERROR),
-            message=message
-        )
-        with codecs.open(
-                os.path.join(
-                    self.path_to_dir_log,
-                'a+', UTF8)
-        ) as log_file:
-            log_file.write(string)
-
-    def _create_folder(self):
-        self.path_to_dir_log = re.sub(
-            '[\"\<>*\'?:]|',
-            '',
-            os.path.join(
-                self.ROOT_FOLDER,
-                getattr(self, self.SEPARATE_FOLDER),
-                datetime.datetime.now().strftime(YYYY_MM_DD_FORMAT),
-                TXT
-            )
-        )
-        if os.path.exists(self.path_to_dir_log):
-            return
-        os.makedirs(self.path_to_dir_log)
-
-    def write_log(self, level, message):
-        if not self.FOLDER_IS_EXITS:
-            self._create_folder()
-        self._write_log(level, message)
 
 
 class InterfaceReportMTS(object):
@@ -195,14 +114,25 @@ class PDFReport(InterfaceReportMTS, ReportLoggerMixin):
         try:
             try:
                 self.pattern_date = re.compile(pattern_date, re.UNICODE)
+                self.write_log(LoggerAbstractMixin.INFO,
+                               u"Успех: компиляции регулярных вырожений")
             except sre_constants.error:
+                self.write_log(LoggerAbstractMixin.ERROR,
+                               u"Ошибка: компиляции регулярного вырожения")
                 raise BillingErrorPatternDate
             try:
                 self.pattern_contract = re.compile(pattern_contract, re.UNICODE)
             except sre_constants.error:
+                self.write_log(LoggerAbstractMixin.ERROR,
+                               u"Ошибка: компиляции регулярного вырожения")
                 raise BillingErrorPatternContact
 
+        except (BillingErrorPatternContact, BillingErrorPatternDate) as error:
+            self.write_log(LoggerAbstractMixin.ERROR,
+                           u"error.message: {}".format(error.message))
         except ValueError as error:
+            self.write_log(LoggerAbstractMixin.ERROR,
+                           u"error.message: {}".format(error.message))
             sys.stdout.write(
                 error.message
             )
@@ -254,6 +184,8 @@ class PDFReport(InterfaceReportMTS, ReportLoggerMixin):
         :return: None
         """
         count_pages = self.count_pages(file_name)
+        self.write_log(LoggerAbstractMixin.INFO,
+                       u"Успех: Получено количество страниц")
         if count_pages > ONE:
 
             for page_num in xrange(ONE, count_pages):
@@ -269,7 +201,8 @@ class PDFReport(InterfaceReportMTS, ReportLoggerMixin):
                     self.contract = contract.group('contract').replace(' ', '')
 
                 if not self.contract:
-                    sys.stdout.write(u"Не обнаружен контракт \n")
+                    self.write_log(LoggerAbstractMixin.INFO,
+                                   u"Информация: Не обнаружен контракт")
 
                 date_ = self.pattern_date.search(unicode_text)
 
@@ -277,20 +210,20 @@ class PDFReport(InterfaceReportMTS, ReportLoggerMixin):
                     self.date_ = date_.group('date_')
 
                 if not self.date_:
-                    sys.stdout.write(u"Не обнаружена дата \n")
+                    self.write_log(LoggerAbstractMixin.INFO,
+                                   u"Информация: Не обнаружена дата")
 
                 for element_on_page in self.data_unit.findall(
                         unicode_text.decode(UTF8)):
 
-                    groups = self.data_unit.match(element_on_page[0])
+                    groups = self.data_unit.match(element_on_page[ZERO])
                     details = {}
                     for key, value in self.DICT_ARGUMENTS.items():
                         details.update({value: groups.group(key)})
                     self.result.append(details)
                 if stop_flag:
-                    sys.stdout.write(
-                        u'\nСборка коллекции завершина\n '
-                    )
+                    self.write_log(LoggerAbstractMixin.INFO,
+                                   u"Успех: Сборка коллекции завершина")
                     return
 
     def write_(self, out_file, result):
@@ -313,14 +246,22 @@ class PDFReport(InterfaceReportMTS, ReportLoggerMixin):
         """
         if self.END_LINE is None:
             raise ValueError(u"Не задано значение END_LINE")
+        self.write_log(LoggerAbstractMixin.INFO,
+                       u"Информация: Файл сканируется {}".format(
+                           file_name.decode(CP_1251))
+                       )
         self.read_while_not_find_end_line(file_name)
 
         if self.out_file:
             try:
                 self.write_(self.out_file, self.result)
             except ValueError:
-                sys.stdout.write(u'Отсуствуют данные  \n')
-                sys.stdout.write(u'файл пропущен {} \n'.format(self.out_file))
+                self.write_log(LoggerAbstractMixin.ERROR,
+                               u"Ошибка: Не достаточно данных для отчетов")
+                self.write_log(LoggerAbstractMixin.INFO,
+                               u"Информация: Файл пропущен {}".format(
+                                   file_name)
+                               )
                 return
         else:
             sys.stdout.write(
