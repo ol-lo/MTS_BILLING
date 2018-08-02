@@ -1,4 +1,8 @@
+# -*- coding: utf-8 -*-
 from distutils.core import setup
+import os
+import glob
+import numpy
 import py2exe
 from os import sys, path
 
@@ -9,21 +13,17 @@ except NameError:  # py2exe script, not a module
 
     sys.path.append(path.dirname(path.dirname(sys.argv[0])))
 
-import os
-import glob
-import numpy
 
+def find_data_files(source, target, patterns):
+    """Определяет найденные файлы данных и возвращает совпадения
+     в формате, совместимом с data_files.
 
-def find_data_files(source,target,patterns):
-    """Locates the specified data-files and returns the matches
-    in a data_files compatible format.
-
-    source is the root of the source data tree.
-        Use '' or '.' for current directory.
-    target is the root of the target data tree.
-        Use '' or '.' for the distribution directory.
-    patterns is a sequence of glob-patterns for the
-        files you want to copy.
+     source - это корень дерева данных источника.
+         Используйте '' или '.' для текущего каталога.
+     target - это корень дерева данных цели.
+         Используйте '' или '.' для каталога распространения.
+     шаблоны - это последовательность шаблонов glob для
+         файлы, которые вы хотите скопировать.
     """
     if glob.has_magic(source) or glob.has_magic(target):
         raise ValueError("Magic not allowed in src, target")
@@ -45,10 +45,10 @@ def find_data_files(source,target,patterns):
 def numpy_dll_paths_fix():
     paths = set()
     np_path = numpy.__path__[0]
-    for dirpath, _, filenames in os.walk(np_path):
-        for item in filenames:
+    for dir_path, _, file_names in os.walk(np_path):
+        for item in file_names:
             if item.endswith('.dll'):
-                paths.add(dirpath)
+                paths.add(dir_path)
 
     sys.path.append(*list(paths))
 
@@ -74,5 +74,5 @@ setup(
     },
     data_files=find_data_files('data', '', [
         'config.yaml',
-    ]), requires=['PyPDF2', 'openpyxl', 'numpy']
+    ]), requires=['PyPDF2', 'openpyxl', 'numpy', 'PyYAML']
 )

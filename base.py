@@ -3,6 +3,7 @@ import os
 from copy import copy
 
 import openpyxl
+import time
 from openpyxl.styles import PatternFill
 from openpyxl.styles.colors import Color
 from time import sleep
@@ -11,13 +12,44 @@ from constants import (
     NAME_FILE, NAME_PAGE, MAP_EXCEL, DATA_ROW_HEADER, FIRST, CP_1251,
     MAP_MONTH,
     PHONE, COL_NAMES, RANGE_WITH_SUM, START, TEMPLATE_RANGE, END,
-    AMOUNT_PER_NUMBER, ONE, CONTRACT, PATH_TO_IN, XLSM)
+    AMOUNT_PER_NUMBER, ONE, CONTRACT, PATH_TO_IN, XLSM, ZERO)
+from logger import ReportLoggerMixin
 from report import PDFReport, BillingErrorFileWrite
+
+
+def print_progress_bar(
+        iteration, total, prefix='', suffix='',
+        decimals=1, length=100, fill='#', time_sec=0
+):
+    """
+    Call in a loop to create terminal progress bar
+    @params:
+        iteration:  Номер текущей итерации
+        total:      Количество итераций
+        prefix:     Сообщение в строке прогресса , перед прогресс баром
+        suffix:     Сообщение в строке прогресса , после прогресс бара
+        decimals:   Целое, позитовное число прогесса
+        length:     Длина в символах , прогесс бара
+        fill:       символ заполнения прогресс бара
+        time_sec:   Время в секундах
+    """
+    percent = (
+            "{0:." + str(decimals) + "f}"
+    ).format(100 * (iteration / float(total)))
+    filled_length = int(length * iteration // total)
+    progress_time = time.time() - time_sec
+    bar = fill * filled_length + '-' * (length - filled_length)
+    sys.stdout.write('\r%s |%s| %s%% %s\t\t%f sec' % (
+        prefix, bar, percent, suffix, progress_time))
+    if iteration == total:
+        sys.stdout.write('\n')
 
 
 class AllReports(PDFReport):
     END_LINE = u'Итого по лицевому счету без скидки'
     DICT_ARGUMENTS = {
+        # Номер группы : Имя группы
+        # Номер группы в регулярном вырожении
         12: AMOUNT_PER_NUMBER,
         2: PHONE
     }
@@ -29,7 +61,6 @@ class AllReports(PDFReport):
         self.out_file = out_xls
 
     def write_(self, out_file, result):
-
         book_excel = openpyxl.load_workbook(out_file)
 
         if XLSM in out_file:
@@ -58,20 +89,26 @@ class AllReports(PDFReport):
             x if x.value == ' '.join([month_name, year]) else None,
             range_with_data_headers[FIRST]
         )
-        sys.stdout.write(
-            u'\n Выборка дат из excel завершина \n '
-        )
+
+        self.write_log(ReportLoggerMixin.INFO,
+                       u"Успех: Выборка дат из excel завершина")
 
         range_phone = filter(lambda x: x[0].value is not None, range_phone_all)
 
-        sys.stdout.write(u'\nВыборка телефонов завершина. \n')
+        self.write_log(ReportLoggerMixin.INFO,
+                       u"Успех: Выборка телефонов завершина.")
 
         if range_date_headers:
-            cell_cur = range_date_headers[0]
-            sys.stdout.write(
-                u"дата присуствует в"
-                u" списке\n ячейка {}{} \n значение {}\n\n".format(
-                    cell_cur.column, cell_cur.row, cell_cur.value)
+            cell_cur = range_date_headers[ZERO]
+
+            self.write_log(
+                ReportLoggerMixin.INFO,
+                (
+                    u"Успех: дата присуствует в"
+                    u" списке ячейка {}{} значение ".format(
+                        cell_cur.column, cell_cur.row,
+                        cell_cur.value)
+                )
             )
 
             phones_amount_dict = map(
@@ -87,6 +124,7 @@ class AllReports(PDFReport):
                 result)
 
             dict_res = {}
+            amount_per_number = None
             for item in phones_amount_dict:
                 dict_res.update(item)
             for item_cell in range_phone:
@@ -103,9 +141,13 @@ class AllReports(PDFReport):
                 amount_per_number = dict_res.get(var_temp_value, None)
                 if amount_per_number is not None:
                     dict_res.pop(var_temp_value)
-                    sys.stdout.write(
-                        u"Подстановка значений {}+{} в ячейку {}\n".format(
-                            amount_per_number, cur_value, var_temp_row_index)
+                    self.write_log(
+                        ReportLoggerMixin.INFO,
+                        u"Информация: "
+                        u"Подстановка значений {}+"
+                        u"{} в ячейку {}".format(
+                            amount_per_number, cur_value,
+                            var_temp_row_index)
                     )
                     page_for_report[var_temp_row_index].value = (
                             amount_per_number + cur_value)
@@ -128,7 +170,7 @@ class AllReports(PDFReport):
 
                         new_cell = page_for_report[var_temp_row_index]
                         old_cell = page_for_report[
-                            '{}{}'.format(left_cell, item_cell[0].row)]
+                            '{}{}'.format(left_cell, item_cell[ZERO].row)]
                         # копируем значения стилей
                         new_cell.font = copy(old_cell.font)
                         new_cell.border = copy(old_cell.border)
@@ -143,42 +185,56 @@ class AllReports(PDFReport):
             last_num = range_phone[-1][0].row
             if dict_res and not amount_per_number:
                 for item_not_found in dict_res:
-                    sys.stdout.write(
-                        u"{}   нет в списке \n".format(item_not_found)
+
+                    self.write_log(
+                        ReportLoggerMixin.INFO,
+                        u"Информация: "
+                        u"{}   нет в списке".format(item_not_found)
                     )
+
                     last_num += ONE
-                    sys.stdout.write(
-                        u'добавляю значение {} в {}{}\n'.format(
-                            dict_res[item_not_found], cell_cur.column, last_num)
+
+                    self.write_log(
+                        ReportLoggerMixin.INFO,
+                        u"Информация: "
+                        u"добавляю значение {} в {}{}".format(
+                            dict_res[item_not_found],
+                            cell_cur.column, last_num
+                        )
                     )
+
                     page_for_report[
                         '{}{}'.format(cell_cur.column, last_num)
                     ].value = dict_res[item_not_found]
-
-                    sys.stdout.write(
-                        u'добавляю значение {} в {}{}\n'.format(
+                    self.write_log(
+                        ReportLoggerMixin.INFO,
+                        u"Информация"
+                        u"добавляю значение {} в {}{}".format(
                             item_not_found, MAP_EXCEL[COL_NAMES][PHONE],
-                            last_num)
+                            last_num
+                       )
                     )
 
                     page_for_report[
                         '{}{}'.format(MAP_EXCEL[COL_NAMES][PHONE], last_num)
                     ].value = item_not_found
 
-                    sys.stdout.write(
-                        u'добавляю значение {} в {}{}\n'.format(
+                    self.write_log(
+                        ReportLoggerMixin.INFO,
+                        u"Информация: добавляю значение {} в {}{}".format(
                             self.contract, MAP_EXCEL[COL_NAMES][CONTRACT],
                             last_num)
                     )
-
                     page_for_report[
                         '{}{}'.format(
                             MAP_EXCEL[COL_NAMES][CONTRACT], last_num)
                     ].value = self.contract
 
         else:
-            sys.stdout.write(
-                u"дата {} {} {} не найдена\n\nСледующий ...\n".format(
+
+            self.write_log(
+                ReportLoggerMixin.WARNING,
+                u"Внимание: дата {} {} {} не найдена ...".format(
                     day, month, year)
             )
         try:
@@ -186,6 +242,10 @@ class AllReports(PDFReport):
             book_excel.close()
 
         except IOError:
+            self.write_log(
+                ReportLoggerMixin.ERROR,
+                u"Ошибка: Файл используется другой программой"
+            )
             raise BillingErrorFileWrite
 
 
@@ -199,11 +259,17 @@ if __name__ == "__main__" and __package__ is None:
         sys.path.append(path.dirname(path.dirname(sys.argv[0])))
 
     files = os.listdir(PATH_TO_IN)
-
+    sys.stdout.write(u"Авто заполнение отчета... \n")
+    sys.stdout.flush()
+    iter_progress = ZERO
+    now = time.time()
     for file_ in files:
-        sys.stdout.write(file_.decode(CP_1251) + '\n')
+        print_progress_bar(iter_progress + 1, len(files),
+                           prefix='Progress:', suffix='Complete',
+                           length=50, time_sec=now)
+        iter_progress += 1
         try:
-            AllReports(
+            all_reports = AllReports(
                 (
                     u'(Сетевой ресурс(\d{11})'
                     u'\s(Периодические\sуслуги\s\d{1,6},'
@@ -225,11 +291,22 @@ if __name__ == "__main__" and __package__ is None:
 
                 u'.+\d{12}\s{2}(?P<contract>\d{3}\s\d{3}\s\d{3}\s\d{3})',
                 NAME_FILE
+            )
+            all_reports.find_values(os.path.join(PATH_TO_IN, file_))
 
-            ).find_values(os.path.join(PATH_TO_IN, file_))
+            all_reports.write_log(
+                ReportLoggerMixin.INFO,
+                u'Работа с Файлом : {} завершина\n\n\n\n'.format(
+                    file_.decode(CP_1251)
+                )
+            )
         except Exception as err:
             sys.stdout.write(err.message)
 
-    sys.stdout.write(u" Конец ... ")
+    sys.stdout.write(u" Завершино ... \n")
+    all_reports.write_log(ReportLoggerMixin.INFO, u'Завершино ...')
     sys.stdout.write(u" Для выхода зажмите ctrl + C ")
-    sleep(60)
+    try:
+        sleep(60)
+    except KeyboardInterrupt:
+        sys.exit(0)

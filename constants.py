@@ -6,7 +6,7 @@ import yaml
 
 CP_1251 = 'cp1251'
 UTF8 = 'utf-8'
-TXT = u'txt'
+TXT = u'.txt'
 PDF = u'pdf'
 FIRST = ZERO = 0
 ONE = 1
@@ -25,11 +25,11 @@ XLSM = '.xlsm'
 [
     TITLE_ROW, COL_NAMES, DATA_ROW_HEADER, DATA_START, DATA_END, RANGE_FULL,
     PHONE, OWNER, REGION, CONTRACT, WHO, LIMIT, START_CELL_DATE, END_CELL_DATE,
-    START, END, RANGE_WITH_SUM, AMOUNT_PER_NUMBER] = [
+    START, END, RANGE_WITH_SUM, AMOUNT_PER_NUMBER, SUB_CATEGORY] = [
     'TITLE_ROW', 'COL_NAMES', 'DATA_ROW_HEADER', 'DATA_START', 'DATA_END',
     'RANGE_FULL', 'PHONE', 'OWNER', 'REGION', 'CONTRACT', 'WHO', 'LIMIT',
     'START_CELL_DATE', 'END_CELL_DATE', 'START', 'END', 'RANGE_WITH_SUM',
-    'AMOUNT_PER_NUMBER'
+    'AMOUNT_PER_NUMBER', 'SUB_CATEGORY'
 ]
 TEMPLATE_RANGE = '{cell_char_one}{digit_one}:{cell_char_two}{digit_two}'
 MAP_EXCEL = {
@@ -43,9 +43,10 @@ MAP_EXCEL = {
         PHONE: 'C',  # первая координата заголовка PHONE
         CONTRACT: 'D',  # первая координата заголовка CONTRACT
         WHO: 'E',  # первая координата заголовка WHO
+        SUB_CATEGORY: 'F',  # под категория
         LIMIT: 'F'  # первая координата заголовка LIMIT
     },
-    START_CELL_DATE: 'G',  # первая координата, с которой начинается поиск дат
+    START_CELL_DATE: 'H',  # первая координата, с которой начинается поиск дат
     END_CELL_DATE: 'AA',  # первая координата, конца поиска дат
     RANGE_WITH_SUM: {  # вторые координаты, начала и конца ячеек со значениями
         START: 2,
